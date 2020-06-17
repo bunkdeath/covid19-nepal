@@ -15,6 +15,7 @@ logger = logging.getLogger('covid19-nepal')
 
 
 API_URL = "https://covidapi.naxa.com.np/api/v1/stats/"
+API_URL = "https://covid19.mohp.gov.np/covid/api/confirmedcases"
 MONGO_URI = "mongodb://{}:{}@ds229909.mlab.com:29909/covid19-nepal?retryWrites=false ".format(
     settings.DB_USER, settings.DB_PASSWORD)
 
@@ -59,8 +60,25 @@ def start():
         return msg
 
     mohp_data = get_collection(collection_name)
-    data = json.loads(response.text)
-    update_date = data.get('update_date').replace('Z', '')
+    orig_data = json.loads(response.text)
+    orig_data = orig_data.get("nepal")
+
+    data = {
+        "tested": orig_data.get("samples_tested"),
+        "total_samples_collected": 0,
+        "total_samples_pending": 0,
+        "total_negative": orig_data.get("negative"),
+        "update_date": orig_data.get("updated_at"),
+        "confirmed": orig_data.get("positive"),
+        "isolation": orig_data.get("extra2"),
+        "total_recovered": orig_data.get("extra1"),
+        "death": orig_data.get("deaths"),
+        "icu": 0,
+        "occupied_icu": 0,
+        "ventilator": 0,
+        "occupied_ventilator": 0
+    }
+    update_date = orig_data.get("created_at")
     data['data_update_date'] = datetime.fromisoformat(update_date)
     data['created_date'] = datetime.utcnow()
 
@@ -76,7 +94,12 @@ def get_data():
     mohp_data = get_collection(collection_name)
     cursor = mohp_data.find()
     for data in cursor:
-        print(data)
+        test = {
+            "date": data.get("data_update_date"),
+            "tested": data.get("tested"),
+            "confirmed": data.get("confirmed")
+        }
+        print(test)
 
 
 if __name__ == "__main__":
